@@ -1,5 +1,279 @@
 /* Book Finding App Styles */
 
+/* Remove any default blue backgrounds */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: transparent !important;
+}
+
+.dark {
+  background-color: #0f172a !important;
+}
+
+/* Mobile Responsive Improvements */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Hero height adjustments for mobile ONLY */
+  .hero-mobile {
+    height: 40vh !important;
+    min-height: 300px !important;
+  }
+
+  /* For very short mobile screens */
+  @media (max-height: 600px) {
+    .hero-mobile {
+      height: 35vh !important;
+      min-height: 250px !important;
+    }
+  }
+
+  /* For very small screens */
+  @media (max-height: 500px) {
+    .hero-mobile {
+      height: 30vh !important;
+      min-height: 200px !important;
+    }
+  }
+}
+
+/* Glassmorphism Effects */
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+}
+
+.glass-morphism:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode glassmorphism */
+.dark .glass-morphism {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.dark .glass-morphism:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Hero section animations */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Hero gradient transition */
+.hero-gradient-bottom {
+  transition: all 0.3s ease;
+}
+
+/* Custom Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.8s ease-out;
+}
+
+.animate-fade-in-delay {
+  animation: fade-in 1s ease-out 0.3s both;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out 0.2s both;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.5s ease-out;
+}
+
+/* Sliding carousel effects */
+.carousel-container {
+  overflow: hidden;
+  position: relative;
+}
+
+.carousel-slides {
+  display: flex;
+  transition: transform 700ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.carousel-slide {
+  flex: 0 0 100%;
+  position: relative;
+}
+
+/* Smooth sliding animation for hero images */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+/* Enhanced carousel effects */
+.carousel-container:hover .carousel-slides {
+  transform-origin: center;
+}
+
+/* Smooth indicator transitions */
+.slide-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.slide-indicator::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  transition: width 3s linear;
+}
+
+.slide-indicator.active::before {
+  width: 100%;
+}
+
+/* Smooth theme transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Dark mode styles */
+.dark,
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark,
+html.dark body,
+body.dark {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* Ensure dark mode takes effect immediately */
+:root {
+  color-scheme: light;
+  background-color: #f9fafb;
+}
+
+:root.dark {
+  color-scheme: dark;
+  background-color: #0f172a;
+}
+
 /* Custom utility classes for text truncation */
 .line-clamp-2 {
   display: -webkit-box;
@@ -130,4 +404,125 @@ img {
   .grid-responsive {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+/* Page Turning Animations */
+@keyframes pageFlipOut {
+  0% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(-90deg) scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: rotateY(-180deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes pageFlipIn {
+  0% {
+    transform: rotateY(180deg) scale(0.6);
+    opacity: 0;
+  }
+  50% {
+    transform: rotateY(90deg) scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bookSlideOut {
+  0% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes bookSlideIn {
+  0% {
+    transform: translateX(100%) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.page-turning {
+  perspective: 1000px;
+}
+
+.books-grid-turning-out {
+  animation: pageFlipOut 0.3s ease-in-out forwards;
+}
+
+.books-grid-turning-in {
+  animation: pageFlipIn 0.3s ease-in-out forwards;
+}
+
+.book-card-slide-out {
+  animation: bookSlideOut 0.15s ease-in-out forwards;
+}
+
+.book-card-slide-in {
+  animation: bookSlideIn 0.15s ease-in-out forwards;
+}
+
+/* Pagination Button Styles */
+.pagination-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  transform: translateY(0);
+  background: linear-gradient(135deg, #000000 0%, #333333 100%);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border: 2px solid transparent;
+  color: white;
+}
+
+.pagination-button:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #222222 0%, #444444 100%);
+}
+
+.pagination-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #cccccc;
+}
+
+.pagination-button:disabled:hover {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-current {
+  background: white;
+  color: black;
+  border: 2px solid #d1d5db;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-current:hover {
+  background: #f9fafb;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
