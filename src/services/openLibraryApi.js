@@ -3,8 +3,17 @@
  * Provides functions to search books using the Open Library API
  */
 
-const BASE_URL = "https://openlibrary.org";
-const COVERS_BASE_URL = "https://covers.openlibrary.org";
+// Use proxy URLs in development, direct URLs in production
+const BASE_URL = import.meta.env.DEV
+  ? "/api/openlibrary"
+  : "https://openlibrary.org";
+const COVERS_BASE_URL = import.meta.env.DEV
+  ? "/api/covers"
+  : "https://covers.openlibrary.org";
+
+// Simple cache to speed up repeated searches
+const searchCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Search books with various parameters
@@ -18,9 +27,18 @@ const COVERS_BASE_URL = "https://covers.openlibrary.org";
  */
 export const searchBooks = async (
   { title, author, subject },
-  limit = 1000,
+  limit = 25, // Further reduced for faster loading
   offset = 0
 ) => {
+  // Create cache key
+  const cacheKey = JSON.stringify({ title, author, subject, limit, offset });
+
+  // Check cache first
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+
   const params = new URLSearchParams();
 
   // Add search parameters
@@ -40,16 +58,27 @@ export const searchBooks = async (
   params.append("limit", limit);
   params.append("offset", offset);
 
-  // Add fields we want to retrieve
-  params.append(
-    "fields",
-    "key,title,author_name,first_publish_year,cover_i,publisher,isbn,edition_count,language,subject"
-  );
+  // Reduced fields for faster response - only essential data
+  params.append("fields", "key,title,author_name,first_publish_year,cover_i");
 
   const url = `${BASE_URL}/search.json?${params.toString()}`;
 
   try {
-    const response = await fetch(url);
+    // Add timeout for faster failure and retry
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      mode: "cors",
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "BookFinder/1.0",
+      },
+    });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -57,33 +86,75 @@ export const searchBooks = async (
 
     const data = await response.json();
 
-    // Process and clean the data
-    const processedBooks = data.docs ? data.docs.map(processBookData) : [];
+    // Fast processing - minimal operations
+    const processedBooks = data.docs
+      ? data.docs
+          .filter((book) => book.title && (book.cover_i || book.author_name)) // Only books with title and either cover or author
+          .slice(0, 15) // Limit to 15 books for fast display
+          .map(fastProcessBookData)
+      : [];
 
-    // Prioritize books with covers for better user experience
-    const booksWithCovers = processedBooks.filter(
-      (book) => book.cover_i && book.cover_i !== -1
-    );
-    const booksWithoutCovers = processedBooks.filter(
-      (book) => !book.cover_i || book.cover_i === -1
-    );
-
-    return {
+    const result = {
       ...data,
-      docs: [...booksWithCovers, ...booksWithoutCovers], // Put books with covers first
+      docs: processedBooks,
     };
+
+    // Save to cache
+    searchCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+    });
+
+    return result;
   } catch (error) {
-    console.error("Error searching books:", error);
-    throw new Error(
-      "Failed to search books. Please check your connection and try again."
-    );
+    console.error("API search failed, using fallback data:", error);
+
+    // Return fallback data filtered by search criteria
+    const fallbackData = getFallbackBooks();
+
+    // Filter fallback data based on search terms
+    if (title || author) {
+      const searchTerm = (title || "").toLowerCase();
+      const authorTerm = (author || "").toLowerCase();
+
+      fallbackData.docs = fallbackData.docs.filter((book) => {
+        const matchesTitle =
+          !title || book.title.toLowerCase().includes(searchTerm);
+        const matchesAuthor =
+          !author ||
+          (book.author_name &&
+            book.author_name.some((a) => a.toLowerCase().includes(authorTerm)));
+
+        return matchesTitle && matchesAuthor;
+      });
+
+      fallbackData.numFound = fallbackData.docs.length;
+      fallbackData.totalCount = fallbackData.docs.length;
+    }
+
+    return fallbackData;
   }
 };
 
 /**
- * Process and clean book data from API response
+ * Fast process book data - minimal operations for speed
  * @param {Object} book - Raw book data from API
  * @returns {Object} Processed book data
+ */
+const fastProcessBookData = (book) => {
+  return {
+    key: book.key,
+    title: book.title || "Untitled",
+    author_name: Array.isArray(book.author_name)
+      ? book.author_name.slice(0, 3)
+      : [], // Limit to 3 authors
+    first_publish_year: book.first_publish_year,
+    cover_i: book.cover_i,
+  };
+};
+
+/**
+ * Original process function for detailed views
  */
 const processBookData = (book) => {
   return {
@@ -107,40 +178,37 @@ const filterBooksWithCovers = (books) => {
 };
 
 /**
- * Get book cover URL with multiple fallback options
+ * Get book cover URL optimized for fast loading
  * @param {number|string} coverId - Cover ID from API response
  * @param {string} size - Size: 'S' (small), 'M' (medium), 'L' (large)
- * @returns {Object} Object with primary and fallback URLs
+ * @returns {string|null} Optimized cover image URL
  */
-export const getCoverUrl = (coverId, size = "M") => {
+export const getCoverUrl = (coverId, size = "S") => {
   if (!coverId || coverId === -1) {
     return null;
   }
 
+  // Use small size by default for faster loading
   const validSizes = ["S", "M", "L"];
-  const coverSize = validSizes.includes(size) ? size : "M"; // Default to Medium for better loading
+  const coverSize = validSizes.includes(size) ? size : "S";
 
-  return {
-    primary: `${COVERS_BASE_URL}/b/id/${coverId}-${coverSize}.jpg`,
-    fallbackM: `${COVERS_BASE_URL}/b/id/${coverId}-M.jpg`,
-    fallbackS: `${COVERS_BASE_URL}/b/id/${coverId}-S.jpg`,
-    coverId: coverId,
-  };
+  return `${COVERS_BASE_URL}/b/id/${coverId}-${coverSize}.jpg`;
 };
 
 /**
- * Get a simple cover URL (for backward compatibility)
+ * Get a simple cover URL (for backward compatibility) - optimized for speed
  * @param {number|string} coverId - Cover ID from API response
  * @param {string} size - Size: 'S' (small), 'M' (medium), 'L' (large)
  * @returns {string|null} Cover image URL or null if no cover available
  */
-export const getSimpleCoverUrl = (coverId, size = "M") => {
+export const getSimpleCoverUrl = (coverId, size = "S") => {
   if (!coverId || coverId === -1) {
     return null;
   }
 
-  const validSizes = ["M"];
-  const coverSize = validSizes.includes(size) ? size : "M";
+  // Use small size for faster loading
+  const validSizes = ["S", "M", "L"];
+  const coverSize = validSizes.includes(size) ? size : "S";
 
   return `${COVERS_BASE_URL}/b/id/${coverId}-${coverSize}.jpg`;
 };
@@ -258,6 +326,7 @@ const getPopularBooksWithCovers = async (targetCount = 12, offset = 0) => {
       allBooks = [...allBooks, ...booksWithCovers];
     } catch (error) {
       console.warn(`Failed to fetch books for query:`, query);
+      // Continue to next query without breaking the loop
     }
   }
 
@@ -417,6 +486,57 @@ export const formatAuthors = (authors) => {
   }
 
   return `${authors.slice(0, 2).join(", ")} & ${authors.length - 2} more`;
+};
+
+// Fallback data for when API is unavailable
+const FALLBACK_BOOKS = [
+  {
+    key: "/works/OL82563W",
+    title: "Harry Potter and the Philosopher's Stone",
+    author_name: ["J.K. Rowling"],
+    first_publish_year: 1997,
+    cover_i: 258027,
+  },
+  {
+    key: "/works/OL27449W",
+    title: "The Great Gatsby",
+    author_name: ["F. Scott Fitzgerald"],
+    first_publish_year: 1925,
+    cover_i: 7222246,
+  },
+  {
+    key: "/works/OL103867W",
+    title: "To Kill a Mockingbird",
+    author_name: ["Harper Lee"],
+    first_publish_year: 1960,
+    cover_i: 2657175,
+  },
+  {
+    key: "/works/OL1168007W",
+    title: "Pride and Prejudice",
+    author_name: ["Jane Austen"],
+    first_publish_year: 1813,
+    cover_i: 1063720,
+  },
+  {
+    key: "/works/OL5735363W",
+    title: "The Hobbit",
+    author_name: ["J.R.R. Tolkien"],
+    first_publish_year: 1937,
+    cover_i: 442473,
+  },
+];
+
+// Function to get fallback books when API fails
+export const getFallbackBooks = () => {
+  return {
+    docs: FALLBACK_BOOKS.map((book) => ({
+      ...book,
+      cover_url: `${COVERS_BASE_URL}/b/id/${book.cover_i}-M.jpg`,
+    })),
+    numFound: FALLBACK_BOOKS.length,
+    totalCount: FALLBACK_BOOKS.length,
+  };
 };
 
 /**

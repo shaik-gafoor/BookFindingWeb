@@ -368,74 +368,28 @@ const PaginationControls = ({
   );
 };
 
-// Enhanced BookCover component with aggressive timeout handling
+// Super fast BookCover component - minimal loading time
 const BookCover = ({ coverId, title, className = "" }) => {
   const [currentSrc, setCurrentSrc] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    let timeoutId = null;
-    let isCancelled = false;
-
     if (!coverId || coverId === -1) {
       setHasError(true);
-      setIsLoading(false);
-      setCurrentSrc(null);
       return;
     }
 
-    // Start loading immediately
-    setIsLoading(true);
-    setHasError(false);
+    // Get small size URL for fastest loading
+    const coverUrl = getCoverUrl(coverId, "S");
 
-    // Get small size URL for faster loading
-    const coverUrls = getCoverUrl(coverId, "S");
-
-    if (!coverUrls || !coverUrls.fallbackS) {
+    if (!coverUrl) {
       setHasError(true);
-      setIsLoading(false);
-      setCurrentSrc(null);
       return;
     }
 
-    // Very aggressive timeout - 2 seconds max
-    timeoutId = setTimeout(() => {
-      if (!isCancelled) {
-        console.log(`Image timeout for coverId: ${coverId}`);
-        setHasError(true);
-        setIsLoading(false);
-        setCurrentSrc(null);
-      }
-    }, 2000);
-
-    // Preload image to test if it's available
-    const testImg = new Image();
-    testImg.onload = () => {
-      if (!isCancelled) {
-        clearTimeout(timeoutId);
-        setCurrentSrc(coverUrls.fallbackS);
-        setIsLoading(false);
-        setHasError(false);
-      }
-    };
-
-    testImg.onerror = () => {
-      if (!isCancelled) {
-        clearTimeout(timeoutId);
-        console.log(`Image failed to load for coverId: ${coverId}`);
-        setHasError(true);
-        setIsLoading(false);
-        setCurrentSrc(null);
-      }
-    };
-
-    testImg.src = coverUrls.fallbackS;
-
-    return () => {
-      isCancelled = true;
-      if (timeoutId) clearTimeout(timeoutId);
-    };
+    // Set immediately and let browser handle loading
+    setCurrentSrc(coverUrl);
+    setHasError(false);
   }, [coverId]);
 
   const handleImageError = () => {
@@ -470,40 +424,27 @@ const BookCover = ({ coverId, title, className = "" }) => {
 
   return (
     <div className={`${className} relative`}>
-      {isLoading && currentSrc && (
-        <div className="absolute inset-0 bg-gray-100 rounded-md flex items-center justify-center z-10">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
-        </div>
-      )}
       {currentSrc && !hasError ? (
         <img
           src={currentSrc}
           alt={`Cover of ${title || "Book"}`}
-          className="w-full h-48 object-cover rounded-md bg-gray-200 shadow-sm"
-          onError={handleImageError}
+          className="w-full h-48 object-cover rounded-md bg-gray-100 shadow-sm transition-opacity duration-200"
+          onError={() => setHasError(true)}
           loading="lazy"
-          style={{
-            opacity: isLoading ? 0.7 : 1,
-            transition: "opacity 0.2s ease",
-          }}
+          decoding="async"
         />
       ) : (
-        // Show placeholder immediately if no valid src or error occurred
-        <div className="w-full h-48 bg-linear-to-br from-gray-100 to-gray-200 rounded-md flex items-center justify-center shadow-sm">
-          <div className="text-center text-gray-500 p-4">
+        // Show placeholder immediately for faster display
+        <div className="w-full h-48 bg-gray-100 rounded-md flex items-center justify-center shadow-sm">
+          <div className="text-center text-gray-400 p-3">
             <svg
-              className="w-12 h-12 mx-auto mb-2"
+              className="w-8 h-8 mx-auto mb-1"
               fill="currentColor"
               viewBox="0 0 24 24"
             >
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17l2.5-3.15L14 17H9zm10-1h-5l-2-2.5L10 17H5l3.5-4.5 1.5 1.8L12 11l5 5z" />
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
             </svg>
-            <div className="text-xs font-medium text-gray-600">
-              {title
-                ? title.substring(0, 20) + (title.length > 20 ? "..." : "")
-                : "Book Cover"}
-            </div>
-            <div className="text-xs text-gray-400 mt-1">Unavailable</div>
+            <div className="text-xs font-medium">No Cover</div>
           </div>
         </div>
       )}

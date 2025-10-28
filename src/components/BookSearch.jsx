@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 
 const BookSearch = ({ onSearch, loading }) => {
   const [searchParams, setSearchParams] = useState({
@@ -7,15 +7,46 @@ const BookSearch = ({ onSearch, loading }) => {
     subject: "",
   });
 
+  // Debounce ref for auto-search
+  const debounceRef = useRef(null);
+
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    (params) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      debounceRef.current = setTimeout(() => {
+        if (params.title || params.author || params.subject) {
+          onSearch(params);
+        }
+      }, 500); // 500ms delay
+    },
+    [onSearch]
+  );
+
   const handleChange = (field, value) => {
-    setSearchParams((prev) => ({
-      ...prev,
+    const newParams = {
+      ...searchParams,
       [field]: value,
-    }));
+    };
+
+    setSearchParams(newParams);
+
+    // Auto-search as user types (debounced)
+    if (value.length >= 3) {
+      debouncedSearch(newParams);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Clear debounce timer
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
 
     // At least one field must be filled
     if (!searchParams.title && !searchParams.author && !searchParams.subject) {
