@@ -250,7 +250,7 @@ If you encounter any issues or have questions:
 
 ### 🚀 Live Demo
 
-[View Live Application](https://your-demo-url.netlify.app) _(Update with your actual deployment URL)_
+[View Live Application](https://booksfinderweb.netlify.app/) _(Update with your actual deployment URL)_
 
 ### 📸 Screenshots
 
